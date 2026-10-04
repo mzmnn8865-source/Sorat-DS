@@ -24,7 +24,7 @@
   #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   .grain {
     position: fixed; inset: -50%; z-index: 100; pointer-events: none;
-    opacity: 0.035; mix-blend-mode: overlay;
+    opacity: 0.03; mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     animation: grainShift 8s steps(8) infinite;
   }
@@ -36,8 +36,8 @@
   .vignette {
     position: fixed; inset: 0; z-index: 90; pointer-events: none;
     background: radial-gradient(ellipse at 50% 50%,
-      transparent 0%, transparent 40%,
-      rgba(5,5,10,0.35) 62%, rgba(5,5,10,0.85) 84%, #05050a 100%);
+      transparent 0%, transparent 42%,
+      rgba(5,5,10,0.3) 65%, rgba(5,5,10,0.82) 86%, #05050a 100%);
   }
   .hud {
     position: fixed; z-index: 70;
@@ -160,7 +160,7 @@
   const TAU = Math.PI * 2;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const lerp = (a, b, k) => a + (b - a) * k;
-  const rand = (a, b) => a + Math.random() * (b - a);
+  const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
   function mixColor(a, b, k) {
     return {
@@ -174,6 +174,7 @@
      ابعاد
      ═══════════════════════════════════════════════════════ */
   let W = 0, H = 0, CX = 0, CY = 0, SCALE = 0, dpr = 1;
+  let BASE_SIZE = 1.5;
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
@@ -183,39 +184,40 @@
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
     CX = W / 2;
     CY = H / 2;
-    /* ارتفاع پورت (پرت) بزرگ‌تر از عرض، پس SCALE بر اساس H */
-    SCALE = Math.min(W / 1.6, H / 2.4);
+
+    /* SCALE — محدود به هر دو بعد */
+    SCALE = Math.min(W / 1.7, H / 2.6);
+
+    /* اندازهٔ پایهٔ ذرات به پیکسل — مستقل از SCALE */
+    BASE_SIZE = Math.max(1.4, Math.min(W, H) * 0.0022);
   }
 
   /* ═══════════════════════════════════════════════════════
-     پالت رنگی — استخراج‌شده از تصویر
+     پالت رنگی
      ═══════════════════════════════════════════════════════ */
   const P = {
-    /* پوست روشن با ته‌رنگ گرم */
     SKIN:      { r: 240, g: 214, b: 200 },
     SKIN_L:    { r: 252, g: 234, b: 222 },
     SKIN_D:    { r: 198, g: 168, b: 158 },
     SKIN_DEEP: { r: 145, g: 112, b: 108 },
 
-    /* موی مشکی مطلق */
-    HAIR:      { r: 4,  g: 3,  b: 8 },
-    HAIR_MID:  { r: 18, g: 14, b: 24 },
-    HAIR_SHINE:{ r: 55, g: 46, b: 58 },
-    HAIR_EDGE: { r: 32, g: 25, b: 35 },
+    HAIR:      { r: 6,  g: 4,  b: 10 },
+    HAIR_MID:  { r: 22, g: 16, b: 28 },
+    HAIR_SHINE:{ r: 62, g: 52, b: 64 },
+    HAIR_EDGE: { r: 38, g: 30, b: 42 },
 
-    /* چشم */
     EYE_W:     { r: 250, g: 244, b: 236 },
     IRIS:      { r: 32, g: 22, b: 26 },
-    IRIS_L:    { r: 78, g: 55, b: 48 },
+    IRIS_L:    { r: 82, g: 58, b: 50 },
     PUPIL:     { r: 4,  g: 2,  b: 6 },
     LASH:      { r: 6,  g: 3,  b: 10 },
-    EYE_SHADOW:{ r: 78, g: 55, b: 62 },
+    EYE_SHADOW:{ r: 82, g: 58, b: 65 },
     CATCH:     { r: 255, g: 252, b: 246 },
     BROW:      { r: 12, g: 8,  b: 14 },
 
-    /* دهان */
     LIP_D:     { r: 118, g: 48, b: 55 },
     LIP:       { r: 168, g: 82, b: 88 },
     LIP_L:     { r: 198, g: 122, b: 128 },
@@ -223,39 +225,27 @@
     TOOTH_S:   { r: 205, g: 192, b: 184 },
     MOUTH_IN:  { r: 45, g: 18, b: 28 },
 
-    /* دست */
     NAIL:      { r: 246, g: 224, b: 214 },
-    RING:      { r: 220, g: 220, b: 228 },
+    RING:      { r: 224, g: 224, b: 232 },
     RING_D:    { r: 172, g: 172, b: 182 },
 
-    /* لباس */
     BLAZER:    { r: 8,  g: 8,  b: 12 },
-    BLAZER_H:  { r: 32, g: 32, b: 40 },
-    LACE:      { r: 18, g: 18, b: 24 },
-    LACE_H:    { r: 48, g: 44, b: 54 },
+    BLAZER_H:  { r: 38, g: 38, b: 46 },
+    LACE:      { r: 22, g: 22, b: 28 },
+    LACE_H:    { r: 55, g: 50, b: 60 },
 
-    /* جواهر */
-    CHAIN:     { r: 212, g: 212, b: 222 },
-    PENDANT:   { r: 188, g: 188, b: 198 },
-
-    /* پس‌زمینه */
-    BG:        { r: 55, g: 55, b: 65 }
+    CHAIN:     { r: 220, g: 220, b: 230 },
+    PENDANT:   { r: 192, g: 192, b: 202 }
   };
 
   /* ═══════════════════════════════════════════════════════
-     ساخت پرتره — نقطه به نقطه
+     ساخت پرتره
      ═══════════════════════════════════════════════════════ */
   function makePortrait(n) {
     const pts = [];
 
     function add(x, y, c) {
-      pts.push({ x, y, r: c.r, g: c.g, b: c.b });
-    }
-    function addN(x, y, c, count, jx, jy) {
-      for (let i = 0; i < count; i++) {
-        add(x + (Math.random() - 0.5) * jx,
-            y + (Math.random() - 0.5) * jy, c);
-      }
+      pts.push({ x: x, y: y, r: c.r, g: c.g, b: c.b });
     }
     function blob(cx, cy, rx, ry, count, colorFn) {
       for (let i = 0; i < count; i++) {
@@ -265,36 +255,24 @@
         add(cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r, c);
       }
     }
-    function path2(cx, cy, rx, ry, count, t0, t1, colorFn) {
-      for (let i = 0; i < count; i++) {
-        const t = t0 + (t1 - t0) * (i / count);
-        const x = cx + Math.cos(t) * rx;
-        const y = cy + Math.sin(t) * ry;
-        add(x, y, colorFn(i / count));
-      }
-    }
 
-    /* ═════════ بودجه‌بندی ═════════ */
     const B = {
-      hair:   Math.floor(n * 0.32),
-      face:   Math.floor(n * 0.15),
+      hair:   Math.floor(n * 0.30),
+      face:   Math.floor(n * 0.13),
       eyes:   Math.floor(n * 0.10),
       brows:  Math.floor(n * 0.035),
-      nose:   Math.floor(n * 0.028),
+      nose:   Math.floor(n * 0.030),
       mouth:  Math.floor(n * 0.085),
       hand:   Math.floor(n * 0.075),
-      neck:   Math.floor(n * 0.02),
-      chest:  Math.floor(n * 0.055),
-      blazer: Math.floor(n * 0.09),
-      lace:   Math.floor(n * 0.018),
-      jewel:  Math.floor(n * 0.012)
+      neck:   Math.floor(n * 0.020),
+      chest:  Math.floor(n * 0.065),
+      blazer: Math.floor(n * 0.10),
+      lace:   Math.floor(n * 0.025),
+      jewel:  Math.floor(n * 0.015)
     };
 
-    /* ═══════════════════════════════════════════
-       مو — مشکی، موج‌دار، حجیم
-       ═══════════════════════════════════════════ */
-
-    /* ۱. تاج مو — بالای سر */
+    /* ═══ مو ═══ */
+    /* تاج */
     for (let i = 0; i < Math.floor(B.hair * 0.14); i++) {
       const a = Math.PI * (1.0 + Math.random() * 0.9);
       const r = 0.36 + Math.random() * 0.12;
@@ -302,38 +280,31 @@
           -0.42 + Math.sin(a) * r,
           mixColor(P.HAIR, P.HAIR_MID, Math.random()));
     }
-
-    /* ۲. موی سمت چپ بیننده — کوتاه‌تر */
-    for (let i = 0; i < Math.floor(B.hair * 0.22); i++) {
+    /* موی سمت چپ بیننده — کوتاه‌تر */
+    for (let i = 0; i < Math.floor(B.hair * 0.20); i++) {
       const t = Math.random();
       const y = -0.78 + t * 1.25;
-      const baseX = -0.32 - t * 0.22;
-      const wave = Math.sin(t * 5.5) * 0.055 + Math.sin(t * 2.1) * 0.03;
+      const baseX = -0.32 - t * 0.20;
+      const wave = Math.sin(t * 5.5) * 0.05 + Math.sin(t * 2.1) * 0.03;
       const spread = 0.16 * (0.5 + t * 0.9);
-      add(baseX + wave + (Math.random() - 0.5) * spread,
-          y,
+      add(baseX + wave + (Math.random() - 0.5) * spread, y,
           mixColor(P.HAIR, P.HAIR_EDGE, Math.random() * 0.6));
     }
-
-    /* ۳. موی سمت راست بیننده — بلند و موج‌دار */
+    /* موی سمت راست بیننده — بلند و موج‌دار */
     for (let i = 0; i < Math.floor(B.hair * 0.42); i++) {
       const t = Math.random();
       const y = -0.82 + t * 2.05;
       const baseX = 0.30 + t * 0.36;
-      const wave = Math.sin(t * 8.2 + 1) * 0.075 +
+      const wave = Math.sin(t * 8.2 + 1) * 0.07 +
                    Math.sin(t * 3.4 + 0.5) * 0.05 +
                    Math.sin(t * 13) * 0.02;
       const spread = 0.24 * (0.6 + t * 0.7);
       let c;
-      if (Math.random() < 0.07) {
-        c = mixColor(P.HAIR_MID, P.HAIR_SHINE, Math.random());
-      } else {
-        c = mixColor(P.HAIR, P.HAIR_MID, Math.random() * 0.7);
-      }
+      if (Math.random() < 0.08) c = mixColor(P.HAIR_MID, P.HAIR_SHINE, Math.random());
+      else c = mixColor(P.HAIR, P.HAIR_MID, Math.random() * 0.7);
       add(baseX + wave + (Math.random() - 0.5) * spread, y, c);
     }
-
-    /* ۴. رشته‌های روی صورت */
+    /* رشته‌های روی صورت */
     for (let i = 0; i < Math.floor(B.hair * 0.06); i++) {
       const side = Math.random() < 0.5 ? 1 : -1;
       const t = Math.random();
@@ -341,118 +312,99 @@
       const x = side * (0.14 + t * 0.16) + Math.sin(t * 5 + side) * 0.028;
       add(x, y, mixColor(P.HAIR, P.HAIR_EDGE, Math.random() * 0.5));
     }
-
-    /* ۵. موی پشت شانه‌ها */
-    for (let i = 0; i < Math.floor(B.hair * 0.16); i++) {
+    /* موی پشت شانه‌ها */
+    for (let i = 0; i < Math.floor(B.hair * 0.18); i++) {
       const side = Math.random() < 0.5 ? 1 : -1;
       const x = side * (0.32 + Math.random() * 0.42);
       const y = 0.15 + Math.random() * 0.85;
       add(x, y, mixColor(P.HAIR, P.HAIR_MID, Math.random() * 0.5));
     }
 
-    /* ═══════════════════════════════════════════
-       صورت — بیضی با چرخش ملایم
-       ═══════════════════════════════════════════ */
-    const faceCX = 0.01;
-    const faceCY = -0.38;
-    const faceRX = 0.235;
-    const faceRY = 0.37;
-
+    /* ═══ صورت ═══ */
+    const faceCX = 0.01, faceCY = -0.38;
+    const faceRX = 0.235, faceRY = 0.37;
     for (let i = 0; i < B.face; i++) {
       const a = Math.random() * TAU;
       const r = Math.sqrt(Math.random());
       let x = Math.cos(a) * faceRX * r;
       let y = Math.sin(a) * faceRY * r;
-      /* پهن‌تر در گونه‌ها */
       const yn = y / faceRY;
       if (Math.abs(yn) < 0.55) x *= 1.06;
-      /* چانه باریک‌تر */
       if (yn > 0.6) x *= (1 - (yn - 0.6) * 0.7);
-      /* پیشانی باریک‌تر */
       if (yn < -0.5) x *= (1 - (-yn - 0.5) * 0.5);
       add(faceCX + x, faceCY + y, mixColor(P.SKIN, P.SKIN_L, Math.random() * 0.5));
     }
-
-    /* روشنایی پیشانی */
     blob(0.0, -0.58, 0.13, 0.09, Math.floor(B.face * 0.15),
       () => mixColor(P.SKIN_L, {r:255,g:245,b:235}, Math.random() * 0.7));
-
-    /* روشنایی گونه راست (سمت بیننده) */
     blob(0.14, -0.24, 0.11, 0.10, Math.floor(B.face * 0.13),
       () => mixColor(P.SKIN_L, P.SKIN, Math.random()));
-
-    /* سایه گونه چپ */
     blob(-0.14, -0.24, 0.10, 0.10, Math.floor(B.face * 0.12),
       () => mixColor(P.SKIN, P.SKIN_D, Math.random() * 0.65));
-
-    /* چانه */
     blob(0.0, -0.04, 0.08, 0.05, Math.floor(B.face * 0.08),
       () => mixColor(P.SKIN, P.SKIN_D, Math.random() * 0.4));
 
-    /* ═══════════════════════════════════════════
-       چشم‌ها — نگاه به سمت راست بیننده
-       ═══════════════════════════════════════════ */
+    /* ═══ چشم‌ها ═══ */
     for (const side of [-1, 1]) {
       const ecx = side * 0.11;
       const ecy = -0.47;
-      const eyeW = 0.078;
-      const eyeH = 0.034;
+      const eyeW = 0.078, eyeH = 0.034;
       const pupilShift = 0.022;
 
       /* خط چشم بالا */
-      for (let i = 0; i < Math.floor(B.eyes * 0.13); i++) {
-        const t = i / Math.floor(B.eyes * 0.13);
+      const c1 = Math.floor(B.eyes * 0.13);
+      for (let i = 0; i < c1; i++) {
+        const t = i / c1;
         const x = ecx + (t - 0.5) * eyeW * 2.05;
         const y = ecy - eyeH - 0.007 + Math.sin(t * Math.PI) * 0.005;
         add(x + (Math.random() - 0.5) * 0.009,
             y + (Math.random() - 0.5) * 0.005, P.LASH);
       }
-
-      /* سفیدی چشم */
-      for (let i = 0; i < Math.floor(B.eyes * 0.14); i++) {
+      /* سفیدی */
+      const c2 = Math.floor(B.eyes * 0.14);
+      for (let i = 0; i < c2; i++) {
         const a = Math.random() * TAU;
         const r = Math.sqrt(Math.random());
         add(ecx + Math.cos(a) * eyeW * r,
             ecy + Math.sin(a) * eyeH * r * 0.9, P.EYE_W);
       }
-
-      /* عنبیه با رگه‌های شعاعی */
+      /* عنبیه */
       const irisR = 0.031;
-      for (let i = 0; i < Math.floor(B.eyes * 0.24); i++) {
+      const c3 = Math.floor(B.eyes * 0.24);
+      for (let i = 0; i < c3; i++) {
         const a = Math.random() * TAU;
         const rr = Math.sqrt(Math.random()) * irisR;
         const rad = 0.75 + Math.sin(a * 9) * 0.25;
         add(ecx + pupilShift + Math.cos(a) * rr,
             ecy + Math.sin(a) * rr,
-            mixColor(P.IRIS, P.IRIS_L, rr / irisR * rad));
+            mixColor(P.IRIS, P.IRIS_L, (rr / irisR) * rad));
       }
-
       /* مردمک */
-      for (let i = 0; i < Math.floor(B.eyes * 0.09); i++) {
+      const c4 = Math.floor(B.eyes * 0.09);
+      for (let i = 0; i < c4; i++) {
         const a = Math.random() * TAU;
         const r = Math.sqrt(Math.random()) * 0.013;
         add(ecx + pupilShift + Math.cos(a) * r,
             ecy + Math.sin(a) * r, P.PUPIL);
       }
-
       /* نقطهٔ نور */
-      for (let i = 0; i < Math.floor(B.eyes * 0.03); i++) {
+      const c5 = Math.floor(B.eyes * 0.03);
+      for (let i = 0; i < c5; i++) {
         const a = Math.random() * TAU;
         const r = Math.sqrt(Math.random()) * 0.006;
         add(ecx + pupilShift - 0.008 + Math.cos(a) * r,
             ecy - 0.007 + Math.sin(a) * r, P.CATCH);
       }
-
-      /* خط پایین چشم */
-      for (let i = 0; i < Math.floor(B.eyes * 0.07); i++) {
-        const t = i / Math.floor(B.eyes * 0.07);
+      /* خط پایین */
+      const c6 = Math.floor(B.eyes * 0.07);
+      for (let i = 0; i < c6; i++) {
+        const t = i / c6;
         const x = ecx + (t - 0.5) * eyeW * 1.85;
         const y = ecy + eyeH + 0.003 + Math.sin(t * Math.PI) * 0.003;
         add(x, y, mixColor(P.EYE_SHADOW, P.LASH, Math.random() * 0.6));
       }
-
-      /* مژه‌های گوشه */
-      for (let i = 0; i < Math.floor(B.eyes * 0.05); i++) {
+      /* مژه */
+      const c7 = Math.floor(B.eyes * 0.05);
+      for (let i = 0; i < c7; i++) {
         const corner = side === -1 ? -1 : 1;
         const cx = ecx + corner * eyeW;
         add(cx + corner * Math.random() * 0.018,
@@ -460,20 +412,20 @@
       }
     }
 
-    /* ═══════════════════════════════════════════
-       ابروها
-       ═══════════════════════════════════════════ */
+    /* ═══ ابروها ═══ */
     for (const side of [-1, 1]) {
       const bx = side * 0.11;
       const by = -0.585;
-      for (let i = 0; i < Math.floor(B.brows / 2); i++) {
-        const t = i / Math.floor(B.brows / 2);
+      const half = Math.floor(B.brows / 2);
+      for (let i = 0; i < half; i++) {
+        const t = i / half;
         const x = bx + (t - 0.5) * 0.155;
         const arch = Math.sin(t * Math.PI) * 0.02;
         add(x, by - arch + (Math.random() - 0.5) * 0.02,
             mixColor(P.BROW, {r:38,g:28,b:34}, Math.random() * 0.5));
       }
-      for (let i = 0; i < Math.floor(B.brows / 4); i++) {
+      const q = Math.floor(B.brows / 4);
+      for (let i = 0; i < q; i++) {
         const t = Math.random();
         const x = bx + (t - 0.5) * 0.155;
         const arch = Math.sin(t * Math.PI) * 0.02;
@@ -481,10 +433,9 @@
       }
     }
 
-    /* ═══════════════════════════════════════════
-       بینی
-       ═══════════════════════════════════════════ */
-    for (let i = 0; i < Math.floor(B.nose * 0.5); i++) {
+    /* ═══ بینی ═══ */
+    const bN = Math.floor(B.nose * 0.5);
+    for (let i = 0; i < bN; i++) {
       const t = Math.random();
       const y = -0.42 + t * 0.20;
       const x = (Math.random() - 0.5) * 0.036 * (1 - t * 0.3) + 0.004;
@@ -492,7 +443,8 @@
     }
     blob(0.004, -0.21, 0.028, 0.020, Math.floor(B.nose * 0.28),
       () => mixColor(P.SKIN, P.SKIN_L, Math.random() * 0.4));
-    for (let i = 0; i < Math.floor(B.nose * 0.22); i++) {
+    const nn = Math.floor(B.nose * 0.22);
+    for (let i = 0; i < nn; i++) {
       const side = i % 2 === 0 ? 1 : -1;
       const a = Math.random() * TAU;
       const r = Math.sqrt(Math.random()) * 0.011;
@@ -500,16 +452,12 @@
           -0.19 + Math.sin(a) * r * 0.6, P.SKIN_DEEP);
     }
 
-    /* ═══════════════════════════════════════════
-       دهان باز — گاز گرفتن انگشت
-       ═══════════════════════════════════════════ */
-    const mcx = 0.0;
-    const mcy = -0.12;
-    const mW = 0.105;
-    const mH = 0.062;
+    /* ═══ دهان باز ═══ */
+    const mcx = 0.0, mcy = -0.12;
+    const mW = 0.105, mH = 0.062;
 
-    /* حفرهٔ دهان */
-    for (let i = 0; i < Math.floor(B.mouth * 0.20); i++) {
+    const mb1 = Math.floor(B.mouth * 0.20);
+    for (let i = 0; i < mb1; i++) {
       const a = Math.random() * TAU;
       const r = Math.sqrt(Math.random());
       add(mcx + Math.cos(a) * mW * r,
@@ -517,23 +465,24 @@
           mixColor(P.MOUTH_IN, {r:82,g:32,b:42}, Math.random()));
     }
 
-    /* ردیف دندان بالایی */
+    /* ردیف دندان */
     const teethY = mcy - 0.022;
     const teethW = mW * 0.92;
     const numTeeth = 8;
-    for (let i = 0; i < Math.floor(B.mouth * 0.38); i++) {
+    const mt = Math.floor(B.mouth * 0.38);
+    for (let i = 0; i < mt; i++) {
       const toothIdx = Math.floor(Math.random() * numTeeth);
       const t = toothIdx / (numTeeth - 1);
       const x = mcx - teethW + t * teethW * 2;
       const y = teethY + (Math.random() - 0.5) * 0.028;
       const posInTooth = (t * numTeeth) % 1;
       const isGap = posInTooth < 0.1 || posInTooth > 0.9;
-      add(x + (Math.random() - 0.5) * 0.008, y,
-          isGap ? P.TOOTH_S : P.TOOTH);
+      add(x + (Math.random() - 0.5) * 0.008, y, isGap ? P.TOOTH_S : P.TOOTH);
     }
 
     /* لب بالا */
-    for (let i = 0; i < Math.floor(B.mouth * 0.14); i++) {
+    const mlu = Math.floor(B.mouth * 0.14);
+    for (let i = 0; i < mlu; i++) {
       const t = Math.random();
       const x = mcx + (t - 0.5) * mW * 2.1;
       const curve = Math.sin(t * Math.PI);
@@ -541,9 +490,9 @@
       add(x, y + (Math.random() - 0.5) * 0.008,
           mixColor(P.LIP_D, P.LIP, Math.random() * 0.75));
     }
-
     /* لب پایین */
-    for (let i = 0; i < Math.floor(B.mouth * 0.16); i++) {
+    const mll = Math.floor(B.mouth * 0.16);
+    for (let i = 0; i < mll; i++) {
       const t = Math.random();
       const x = mcx + (t - 0.5) * mW * 1.85;
       const curve = Math.sin(t * Math.PI);
@@ -551,22 +500,19 @@
       add(x, y + (Math.random() - 0.5) * 0.008,
           mixColor(P.LIP, P.LIP_L, Math.random() * 0.6));
     }
-
-    /* گوشه‌های دهان */
-    for (let i = 0; i < Math.floor(B.mouth * 0.06); i++) {
+    /* گوشه‌ها */
+    const mcor = Math.floor(B.mouth * 0.06);
+    for (let i = 0; i < mcor; i++) {
       const side = i % 2 === 0 ? 1 : -1;
       const x = side * mW + (Math.random() - 0.5) * 0.014;
       const y = mcy + (Math.random() - 0.5) * 0.018;
       add(x, y, mixColor(P.LIP_D, P.SKIN_D, Math.random()));
     }
 
-    /* ═══════════════════════════════════════════
-       دست و انگشت — انگشت اشاره به سمت دهان
-       ═══════════════════════════════════════════ */
-
-    /* انگشت — به سمت بالا به دهان */
+    /* ═══ دست ═══ */
     const fgX = -0.005;
-    for (let i = 0; i < Math.floor(B.hand * 0.35); i++) {
+    const hf1 = Math.floor(B.hand * 0.35);
+    for (let i = 0; i < hf1; i++) {
       const t = Math.random();
       const y = -0.075 + t * 0.21;
       const fingerW = 0.022;
@@ -575,12 +521,9 @@
       if (x < fgX) c = mixColor(c, P.SKIN_D, 0.45);
       add(x, y, c);
     }
-
-    /* ناخن */
     blob(fgX, -0.10, 0.011, 0.009, Math.floor(B.hand * 0.04), () => P.NAIL);
-
-    /* مشت — کف دست */
-    for (let i = 0; i < Math.floor(B.hand * 0.45); i++) {
+    const hf2 = Math.floor(B.hand * 0.45);
+    for (let i = 0; i < hf2; i++) {
       const a = Math.random() * TAU;
       const r = Math.sqrt(Math.random()) * 0.085;
       const x = -0.035 + Math.cos(a) * r;
@@ -589,18 +532,15 @@
       if (x < -0.035) c = mixColor(c, P.SKIN_D, 0.4);
       add(x, y, c);
     }
-
-    /* انگشتر نقره روی انگشت حلقه */
-    for (let i = 0; i < Math.floor(B.hand * 0.08); i++) {
+    const hf3 = Math.floor(B.hand * 0.08);
+    for (let i = 0; i < hf3; i++) {
       const t = Math.random() * TAU;
       const x = -0.022 + Math.cos(t) * 0.018;
       const y = 0.095 + Math.sin(t) * 0.007;
       add(x, y, Math.random() < 0.7 ? P.RING : P.RING_D);
     }
 
-    /* ═══════════════════════════════════════════
-       گردن
-       ═══════════════════════════════════════════ */
+    /* ═══ گردن ═══ */
     for (let i = 0; i < B.neck; i++) {
       const a = Math.random() * TAU;
       const r = Math.sqrt(Math.random());
@@ -612,9 +552,7 @@
       add(x, y, c);
     }
 
-    /* ═══════════════════════════════════════════
-       سینه و یقهٔ V
-       ═══════════════════════════════════════════ */
+    /* ═══ سینه و یقهٔ V ═══ */
     for (let i = 0; i < B.chest; i++) {
       const t = Math.random();
       const y = 0.13 + t * 0.58;
@@ -622,68 +560,58 @@
       const x = (Math.random() - 0.5) * vW * 2;
       add(x, y, mixColor(P.SKIN, P.SKIN_D, t * 0.35));
     }
-
-    /* سایه خط وسط */
-    for (let i = 0; i < Math.floor(B.chest * 0.14); i++) {
+    const chShadow = Math.floor(B.chest * 0.14);
+    for (let i = 0; i < chShadow; i++) {
       const t = Math.random();
       add((Math.random() - 0.5) * 0.02,
           0.20 + t * 0.5,
           mixColor(P.SKIN_D, P.SKIN_DEEP, Math.random() * 0.5));
     }
 
-    /* ═══════════════════════════════════════════
-       کت مشکی
-       ═══════════════════════════════════════════ */
-
-    /* شانهٔ چپ بیننده */
-    for (let i = 0; i < Math.floor(B.blazer * 0.32); i++) {
+    /* ═══ کت ═══ */
+    const bz1 = Math.floor(B.blazer * 0.32);
+    for (let i = 0; i < bz1; i++) {
       const x = -0.35 - Math.random() * 0.38;
       const y = 0.20 + Math.random() * 0.80;
       const lapelEdge = -0.15 + (y - 0.20) * 0.33;
       if (x > lapelEdge) continue;
       add(x, y, mixColor(P.BLAZER, P.BLAZER_H, Math.random() * 0.3));
     }
-
-    /* شانهٔ راست بیننده */
-    for (let i = 0; i < Math.floor(B.blazer * 0.32); i++) {
+    const bz2 = Math.floor(B.blazer * 0.32);
+    for (let i = 0; i < bz2; i++) {
       const x = 0.30 + Math.random() * 0.48;
       const y = 0.20 + Math.random() * 0.80;
       const lapelEdge = 0.15 - (y - 0.20) * 0.33;
       if (x < lapelEdge) continue;
       add(x, y, mixColor(P.BLAZER, P.BLAZER_H, Math.random() * 0.3));
     }
-
-    /* لبه‌های یقهٔ پهن */
-    for (let i = 0; i < Math.floor(B.blazer * 0.18); i++) {
+    const bz3 = Math.floor(B.blazer * 0.18);
+    for (let i = 0; i < bz3; i++) {
       const side = i % 2 === 0 ? 1 : -1;
       const t = Math.random();
       const y = 0.20 + t * 0.72;
       const x = side * (0.16 - t * 0.06) + (Math.random() - 0.5) * 0.01;
       add(x, y, mixColor(P.BLAZER_H, {r:58,g:58,b:68}, Math.random() * 0.4));
     }
-
-    /* بازوی چپ (روی بدن) */
-    for (let i = 0; i < Math.floor(B.blazer * 0.10); i++) {
+    const bz4 = Math.floor(B.blazer * 0.10);
+    for (let i = 0; i < bz4; i++) {
       const x = -0.62 + Math.random() * 0.28;
       const y = 0.35 + Math.random() * 0.55;
       add(x, y, mixColor(P.BLAZER, P.BLAZER_H, Math.random() * 0.4));
     }
-
-    /* دکمه‌های آستین */
+    /* دکمه‌ها */
     for (let i = 0; i < 3; i++) {
       const bx = -0.56;
       const by = 0.52 + i * 0.045;
-      for (let j = 0; j < 5; j++) {
+      for (let j = 0; j < 6; j++) {
         const a = Math.random() * TAU;
-        const r = Math.sqrt(Math.random()) * 0.013;
+        const r = Math.sqrt(Math.random()) * 0.014;
         add(bx + Math.cos(a) * r, by + Math.sin(a) * r,
             mixColor({r:42,g:42,b:52}, P.BLAZER, Math.random()));
       }
     }
 
-    /* ═══════════════════════════════════════════
-       توری مشکی — کف یقه
-       ═══════════════════════════════════════════ */
+    /* ═══ توری ═══ */
     for (let i = 0; i < B.lace; i++) {
       const t = Math.random();
       const y = 0.68 + t * 0.10;
@@ -693,54 +621,37 @@
       add(x, y, mixColor(P.LACE, P.LACE_H, Math.random() * 0.5));
     }
 
-    /* ═══════════════════════════════════════════
-       گردنبند نقره با پلاک
-       ═══════════════════════════════════════════ */
-
-    /* زنجیر دور گردن */
-    for (let i = 0; i < Math.floor(B.jewel * 0.5); i++) {
+    /* ═══ گردنبند ═══ */
+    const jw1 = Math.floor(B.jewel * 0.5);
+    for (let i = 0; i < jw1; i++) {
       const side = Math.random() < 0.5 ? 1 : -1;
       const t = Math.random();
       const y = 0.11 + t * 0.28;
       const x = side * (0.055 + t * 0.038) + (Math.random() - 0.5) * 0.005;
       add(x, y, P.CHAIN);
     }
-
-    /* پلاک قلب شکل */
-    for (let i = 0; i < Math.floor(B.jewel * 0.32); i++) {
+    const jw2 = Math.floor(B.jewel * 0.32);
+    for (let i = 0; i < jw2; i++) {
       const a = Math.random() * TAU;
       const r = Math.sqrt(Math.random()) * 0.018;
       add(Math.cos(a) * r, 0.42 + Math.sin(a) * r, P.PENDANT);
     }
 
-    /* ═══════════════════════════════════════════
-       پس‌زمینه — ذرات خاکستری کم‌رنگ در گوشه‌ها
-       ═══════════════════════════════════════════ */
-    const remaining = n - pts.length;
-    for (let i = 0; i < remaining; i++) {
-      const x = (Math.random() - 0.5) * 2.0;
-      const y = (Math.random() - 0.5) * 2.4;
-      /* فقط گوشه‌ها — نه روی سوژه */
-      const inSubject = Math.abs(x) < 0.85 && y > -1.05 && y < 1.05;
-      if (inSubject) continue;
-      add(x, y, mixColor(P.BG, {r: 28, g: 28, b: 38}, Math.random()));
-    }
-
-    /* پر کردن نهایی */
+    /* پر کردن */
     while (pts.length < n) {
       const a = Math.random() * TAU;
       const r = Math.sqrt(Math.random()) * 0.3;
-      add(Math.cos(a) * r, Math.sin(a) * r - 0.4, P.SKIN);
+      add(Math.cos(a) * r, Math.sin(a) * r - 0.3, P.SKIN);
     }
 
     return pts.slice(0, n);
   }
 
   /* ═══════════════════════════════════════════════════════
-     ذرات — تعداد بالا برای جزئیات
+     ذرات
      ═══════════════════════════════════════════════════════ */
-  const N = prefersReduced ? 2500 :
-            (isMobile || lowEnd) ? 6500 : 13000;
+  const N = prefersReduced ? 3000 :
+            (isMobile || lowEnd) ? 8000 : 14000;
 
   const particles = [];
   for (let i = 0; i < N; i++) {
@@ -748,17 +659,14 @@
     const r = 0.4 + Math.random() * 0.6;
     const depth = Math.pow(Math.random(), 1.3);
     particles.push({
-      cx: Math.cos(a) * r,
-      cy: Math.sin(a) * r,
-      sx: 0, sy: 0,
-      tx: 0, ty: 0,
+      cx: Math.cos(a) * r, cy: Math.sin(a) * r,
+      sx: 0, sy: 0, tx: 0, ty: 0,
       cr: 217, cg: 164, cb: 65,
       sr: 217, sg: 164, sb: 65,
       tr: 217, tg: 164, tb: 65,
-      ox: 0, oy: 0,
-      vx: 0, vy: 0,
+      ox: 0, oy: 0, vx: 0, vy: 0,
       depth: depth,
-      size: 0.45 + depth * 0.85 + Math.random() * 0.25,
+      size: 0.7 + depth * 0.9 + Math.random() * 0.35,
       seed: Math.random() * TAU,
       sensitivity: 0.75 + Math.random() * 1.15,
       skipPhysics: depth < 0.25
@@ -769,7 +677,7 @@
      State
      ═══════════════════════════════════════════════════════ */
   let morphProgress = 0;
-  const MORPH_DURATION = 2.4;   /* ورود اولیه */
+  const MORPH_DURATION = 2.4;
   let time = 0;
   let paused = false;
   let targetPause = 1;
@@ -786,13 +694,8 @@
   let motionMagnitude = 0;
   let lastMotionMag = 9.8;
 
-  /* ═══════════════════════════════════════════════════════
-     تخصیص پرتره
-     ═══════════════════════════════════════════════════════ */
   function assignPortrait() {
     const targets = makePortrait(N);
-
-    /* مرتب‌سازی زاویه‌ای برای morph نرم */
     const pSorted = particles.map(p => ({ p, a: Math.atan2(p.cy, p.cx) }))
                              .sort((A, B) => A.a - B.a);
     const tSorted = targets.map(t => ({ t, a: Math.atan2(t.y, t.x) }))
@@ -813,7 +716,6 @@
   }
 
   function reflow() {
-    /* موقعیت‌های فعلی رو به عنوان شروع، دوباره مستقر کن */
     const targets = makePortrait(N);
     const pSorted = particles.map(p => ({ p, a: Math.atan2(p.cy, p.cx) }))
                              .sort((A, B) => A.a - B.a);
@@ -840,19 +742,19 @@
      ═══════════════════════════════════════════════════════ */
   function draw() {
     /* fade پس‌زمینه */
-    const fadeAlpha = morphProgress < 1 ? 0.14 : 0.24;
+    const fadeAlpha = morphProgress < 1 ? 0.14 : 0.22;
     ctx.fillStyle = 'rgba(5, 5, 10, ' + fadeAlpha + ')';
     ctx.fillRect(0, 0, W, H);
 
     /* پارالاکس */
-    const px = (currentMX - 0.5) * 24;
-    const py = (currentMY - 0.5) * 24;
+    const px = (currentMX - 0.5) * 22;
+    const py = (currentMY - 0.5) * 22;
 
-    /* نفس‌کشیدن */
-    const breathe = 1 + Math.sin(time * 0.55) * 0.018 * currentPause;
+    /* نفس */
+    const breathe = 1 + Math.sin(time * 0.55) * 0.016 * currentPause;
 
-    /* هالهٔ ملایم */
-    const glowIntensity = 0.025 + (1 - morphProgress) * 0.04 + motionMagnitude * 0.035;
+    /* هالهٔ محیطی */
+    const glowIntensity = 0.02 + (1 - morphProgress) * 0.035 + motionMagnitude * 0.03;
     if (glowIntensity > 0.005) {
       const glowR = Math.min(W, H) * 0.7;
       const glow = ctx.createRadialGradient(CX + px, CY + py, 0, CX + px, CY + py, glowR);
@@ -862,14 +764,12 @@
       ctx.fillRect(0, 0, W, H);
     }
 
-    /* آلفا و پیشرفت morph */
-    const e = morphProgress >= 1 ? 1 :
-      (t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)(morphProgress);
+    const e = morphProgress >= 1 ? 1 : easeInOutCubic(morphProgress);
     const isMorphing = morphProgress < 1;
 
-    const invScale = 1 / (SCALE * breathe);
+    /* ⚡ اندازهٔ ذرات به پیکسل — بدون invScale */
+    const sizeMul = BASE_SIZE;
 
-    /* ذرات */
     for (let i = 0; i < N; i++) {
       const p = particles[i];
 
@@ -882,10 +782,9 @@
         by = p.ty;
       }
 
-      /* لرزش ملایم */
+      /* لرزش */
       const sway = Math.sin(time * 0.85 + p.seed) * 0.0018 * currentPause;
-      bx += sway;
-      by += sway * 0.7;
+      bx += sway; by += sway * 0.7;
 
       const fx = bx + p.ox;
       const fy = by + p.oy;
@@ -899,20 +798,30 @@
         cr = p.tr; cg = p.tg; cb = p.tb;
       }
 
-      const sizeBoost = isMorphing ? 1 + Math.sin(morphProgress * Math.PI) * 0.18 : 1;
-      const sz = p.size * invScale * 0.42 * sizeBoost;
+      const sizeBoost = isMorphing ? 1 + Math.sin(morphProgress * Math.PI) * 0.2 : 1;
+      /* ⚡ درست: اندازهٔ مستقیم در پیکسل */
+      const sz = p.size * sizeMul * sizeBoost;
 
-      const depthAlpha = 0.30 + p.depth * 0.60;
-      const alpha = (isMorphing ? (0.5 + e * 0.4) : (0.78 + Math.sin(time * 1.2 + p.seed) * 0.10)) * depthAlpha;
+      const depthAlpha = 0.35 + p.depth * 0.6;
+      const alpha = clamp(
+        (isMorphing ? (0.55 + e * 0.4) : (0.85 + Math.sin(time * 1.2 + p.seed) * 0.08)) * depthAlpha,
+        0, 1
+      );
 
       const cX = fx * SCALE * breathe + CX + px;
       const cY = fy * SCALE * breathe + CY + py;
 
+      /* حذف پیکسل‌های خارج از قاب */
+      if (cX < -5 || cX > W + 5 || cY < -5 || cY > H + 5) continue;
+
       ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + alpha.toFixed(3) + ')';
-      if (sz < 0.9) {
+
+      if (sz < 1.4) {
+        /* ذرات کوچک — مربع (سریع‌تر) */
         const s2 = sz * 2;
         ctx.fillRect(cX - sz, cY - sz, s2, s2);
       } else {
+        /* ذرات بزرگ — دایره */
         ctx.beginPath();
         ctx.arc(cX, cY, sz, 0, TAU);
         ctx.fill();
@@ -928,7 +837,6 @@
     const dt = Math.min(0.05, (now - lastT) / 1000);
     lastT = now;
 
-    /* FPS */
     fpsAcc += dt; fpsCount++;
     if (fpsAcc >= 0.5) {
       const fps = fpsCount / fpsAcc;
@@ -941,12 +849,11 @@
       }
     }
 
-    /* نرم‌سازی */
     currentPause += (targetPause - currentPause) * 0.08;
     currentMX += (targetMX - currentMX) * 0.10;
     currentMY += (targetMY - currentMY) * 0.10;
 
-    /* فیزیک ذرات — حساس */
+    /* فیزیک */
     const ax = (currentMX - 0.5) * 2;
     const ay = (currentMY - 0.5) * 2;
     const accelStrength = 0.0058 * (1 + motionMagnitude * 2.4);
@@ -965,8 +872,7 @@
       p.vy *= 0.955;
       p.ox += p.vx * currentPause;
       p.oy += p.vy * currentPause;
-      /* کلمپ کوچک — چهره شکلشو حفظ کنه */
-      const maxOff = 0.055;
+      const maxOff = 0.05;
       if (p.ox > maxOff) p.ox = maxOff;
       if (p.ox < -maxOff) p.ox = -maxOff;
       if (p.oy > maxOff) p.oy = maxOff;
@@ -975,7 +881,6 @@
 
     motionMagnitude *= 0.93;
 
-    /* morph */
     if (morphProgress < 1) {
       morphProgress += dt / MORPH_DURATION;
       if (morphProgress >= 1) {
@@ -1056,7 +961,6 @@
     }
   }
 
-  /* کلیک = بازسازی */
   let clickLock = 0;
   window.addEventListener('click', e => {
     if (e.target.closest('.pause-btn')) return;
@@ -1068,13 +972,8 @@
   });
 
   window.addEventListener('keydown', e => {
-    if (e.code === 'Space') {
-      e.preventDefault();
-      setPaused(!paused);
-    }
-    if (e.code === 'KeyR') {
-      if (morphProgress >= 0.85) reflow();
-    }
+    if (e.code === 'Space') { e.preventDefault(); setPaused(!paused); }
+    if (e.code === 'KeyR') { if (morphProgress >= 0.85) reflow(); }
   });
 
   const pauseBtn = document.getElementById('pauseBtn');
@@ -1122,4 +1021,4 @@
 })();
 </script>
 </body>
-  </html>
+</html>
