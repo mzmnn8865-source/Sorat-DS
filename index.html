@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#05050a">
+<title>پرترهٔ ذرات</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%23d9a441' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='8' fill='%23d9a441'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all'"
+  href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@200;400;700&family=JetBrains+Mono:wght@300;400&display=swap">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #05050a; color: #e8e2d4;
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    touch-action: manipulation; cursor: crosshair;
+    overscroll-behavior: none;
+    user-select: none; -webkit-user-select: none;
+  }
+  #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .grain {
+    position: fixed; inset: -50%; z-index: 100; pointer-events: none;
+    opacity: 0.035; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: grainShift 8s steps(8) infinite;
+  }
+  @keyframes grainShift {
+    0%{transform:translate(0,0)} 20%{transform:translate(-2%,-1%)}
+    40%{transform:translate(1%,2%)} 60%{transform:translate(-1%,1%)}
+    80%{transform:translate(2%,-1%)} 100%{transform:translate(0,0)}
+  }
+  .vignette {
+    position: fixed; inset: 0; z-index: 90; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 50%,
+      transparent 0%, transparent 40%,
+      rgba(5,5,10,0.35) 62%, rgba(5,5,10,0.85) 84%, #05050a 100%);
+  }
+  .hud {
+    position: fixed; z-index: 70;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: .22em;
+    color: rgba(232,226,212,.3);
+    pointer-events: none; text-transform: uppercase;
+    user-select: none;
+  }
+  .hud.tl { top: 22px; left: 22px; }
+  .hud.tr { top: 22px; right: 22px; text-align: right; }
+  .hud.bl { bottom: 22px; left: 22px; }
+  .hud.br { bottom: 22px; right: 22px; text-align: right; }
+  .hud .dot {
+    display: inline-block; width: 5px; height: 5px;
+    border-radius: 50%; background: #d9a441;
+    margin-inline-end: 6px; vertical-align: middle;
+    box-shadow: 0 0 8px #d9a441;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+  .hud .sub {
+    display: block; margin-top: 4px;
+    color: rgba(217,164,65,.55);
+    font-variant-numeric: tabular-nums; direction: ltr;
+  }
+  .hint {
+    position: fixed; bottom: 22px; left: 50%;
+    transform: translateX(-50%); z-index: 70;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: .3em;
+    color: rgba(232,226,212,.26); text-transform: uppercase;
+    pointer-events: none;
+    animation: hintFade 5s ease-in-out infinite;
+    white-space: nowrap; text-align: center;
+  }
+  @keyframes hintFade { 0%,100%{opacity:.18} 50%{opacity:.6} }
+  .pause-btn {
+    position: fixed; top: 50%; inset-inline-end: 22px;
+    transform: translateY(-50%); z-index: 200;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1px solid rgba(217,164,65,.22);
+    background: rgba(217,164,65,.06);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: rgba(217,164,65,.75);
+    display: grid; place-items: center;
+    cursor: pointer; transition: all .3s ease; padding: 0;
+  }
+  .pause-btn:hover {
+    background: rgba(217,164,65,.14);
+    border-color: rgba(217,164,65,.5);
+    color: #d9a441;
+  }
+  .pause-btn svg { width: 14px; height: 14px; }
+  .pause-btn .icon-play { display: none; }
+  .pause-btn.paused .icon-pause { display: none; }
+  .pause-btn.paused .icon-play { display: block; }
+  @media (max-width: 600px) {
+    .hud { font-size: 9px; letter-spacing: .18em; }
+    .hud.tl, .hud.tr { top: 16px; }
+    .hud.tl { left: 14px; } .hud.tr { right: 14px; }
+    .hud.bl { bottom: 16px; left: 14px; }
+    .hud.br { bottom: 16px; right: 14px; }
+    .pause-btn { top: auto; bottom: 60px; inset-inline-end: 14px; transform: none; }
+    .hint { bottom: 60px; font-size: 9px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .grain, .hud .dot, .hint { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="hud tl" aria-hidden="true">
+  <span class="dot"></span>PORTRAIT
+  <span class="sub" id="particleCount">0</span>
+</div>
+<div class="hud tr" aria-hidden="true">
+  <span id="fpsLabel">60</span> FPS
+  <span class="sub" id="morphLabel">STILL</span>
+</div>
+<div class="hud bl" aria-hidden="true">φ PARTICLE · PORTRAIT</div>
+<div class="hud br" aria-hidden="true">
+  <span id="sensorLabel">SENSOR · OFF</span>
+</div>
+
+<div class="hint" aria-hidden="true" id="hintText">
+  CLICK · TO · REFORM
+</div>
+
+<button class="pause-btn" id="pauseBtn" type="button" aria-label="توقف / ادامه">
+  <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="6" y="4" width="4" height="16" rx="1"/>
+    <rect x="14" y="4" width="4" height="16" rx="1"/>
+  </svg>
+  <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z"/>
+  </svg>
+</button>
+
+<script>
+(function () {
+  'use strict';
+
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isMobile = matchMedia('(max-width: 768px)').matches;
+  const lowEnd = (navigator.hardwareConcurrency || 4) <= 4;
+
+  let DPR_CAP = isMobile || lowEnd ? 1.6 : 2;
+  if (prefersReduced) DPR_CAP = 1.2;
+
+  const TAU = Math.PI * 2;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  function mixColor(a, b, k) {
+    return {
+      r: Math.round(a.r + (b.r - a.r) * k),
+      g: Math.round(a.g + (b.g - a.g) * k),
+      b: Math.round(a.b + (b.b - a.b) * k)
+    };
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ابعاد
+     ═══════════════════════════════════════════════════════ */
+  let W = 0, H = 0, CX = 0, CY = 0, SCALE = 0, dpr = 1;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+    W = Math.max(1, rect.width);
+    H = Math.max(1, rect.height);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    CX = W / 2;
+    CY = H / 2;
+    /* ارتفاع پورت (پرت) بزرگ‌تر از عرض، پس SCALE بر اساس H */
+    SCALE = Math.min(W / 1.6, H / 2.4);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     پالت رنگی — استخراج‌شده از تصویر
+     ═══════════════════════════════════════════════════════ */
+  const P = {
+    /* پوست روشن با ته‌رنگ گرم */
+    SKIN:      { r: 240, g: 214, b: 200 },
+    SKIN_L:    { r: 252, g: 234, b: 222 },
+    SKIN_D:    { r: 198, g: 168, b: 158 },
+    SKIN_DEEP: { r: 145, g: 112, b: 108 },
+
+    /* موی مشکی مطلق */
+    HAIR:      { r: 4,  g: 3,  b: 8 },
+    HAIR_MID:  { r: 18, g: 14, b: 24 },
+    HAIR_SHINE:{ r: 55, g: 46, b: 58 },
+    HAIR_EDGE: { r: 32, g: 25, b: 35 },
+
+    /* چشم */
+    EYE_W:     { r: 250, g: 244, b: 236 },
+    IRIS:      { r: 32, g: 22, b: 26 },
+    IRIS_L:    { r: 78, g: 55, b: 48 },
+    PUPIL:     { r: 4,  g: 2,  b: 6 },
+    LASH:      { r: 6,  g: 3,  b: 10 },
+    EYE_SHADOW:{ r: 78, g: 55, b: 62 },
+    CATCH:     { r: 255, g: 252, b: 246 },
+    BROW:      { r: 12, g: 8,  b: 14 },
+
+    /* دهان */
+    LIP_D:     { r: 118, g: 48, b: 55 },
+    LIP:       { r: 168, g: 82, b: 88 },
+    LIP_L:     { r: 198, g: 122, b: 128 },
+    TOOTH:     { r: 253, g: 250, b: 244 },
+    TOOTH_S:   { r: 205, g: 192, b: 184 },
+    MOUTH_IN:  { r: 45, g: 18, b: 28 },
+
+    /* دست */
+    NAIL:      { r: 246, g: 224, b: 214 },
+    RING:      { r: 220, g: 220, b: 228 },
+    RING_D:    { r: 172, g: 172, b: 182 },
+
+    /* لباس */
+    BLAZER:    { r: 8,  g: 8,  b: 12 },
+    BLAZER_H:  { r: 32, g: 32, b: 40 },
+    LACE:      { r: 18, g: 18, b: 24 },
+    LACE_H:    { r: 48, g: 44, b: 54 },
+
+    /* جواهر */
+    CHAIN:     { r: 212, g: 212, b: 222 },
+    PENDANT:   { r: 188, g: 188, b: 198 },
+
+    /* پس‌زمینه */
+    BG:        { r: 55, g: 55, b: 65 }
+  };
+
+  /* ═══════════════════════════════════════════════════════
+     ساخت پرتره — نقطه به نقطه
+     ═══════════════════════════════════════════════════════ */
+  function makePortrait(n) {
+    const pts = [];
+
+    function add(x, y, c) {
+      pts.push({ x, y, r: c.r, g: c.g, b: c.b });
+    }
+    function addN(x, y, c, count, jx, jy) {
+      for (let i = 0; i < count; i++) {
+        add(x + (Math.random() - 0.5) * jx,
+            y + (Math.random() - 0.5) * jy, c);
+      }
+    }
+    function blob(cx, cy, rx, ry, count, colorFn) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * TAU;
+        const r = Math.sqrt(Math.random());
+        const c = colorFn(r, a);
+        add(cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r, c);
+      }
+    }
+    function path2(cx, cy, rx, ry, count, t0, t1, colorFn) {
+      for (let i = 0; i < count; i++) {
+        const t = t0 + (t1 - t0) * (i / count);
+        const x = cx + Math.cos(t) * rx;
+        const y = cy + Math.sin(t) * ry;
+        add(x, y, colorFn(i / count));
+      }
+    }
+
+    /* ═════════ بودجه‌بندی ═════════ */
+    const B = {
+      hair:   Math.floor(n * 0.32),
+      face:   Math.floor(n * 0.15),
+      eyes:   Math.floor(n * 0.10),
+      brows:  Math.floor(n * 0.035),
+      nose:   Math.floor(n * 0.028),
+      mouth:  Math.floor(n * 0.085),
+      hand:   Math.floor(n * 0.075),
+      neck:   Math.floor(n * 0.02),
+      chest:  Math.floor(n * 0.055),
+      blazer: Math.floor(n * 0.09),
+      lace:   Math.floor(n * 0.018),
+      jewel:  Math.floor(n * 0.012)
+    };
+
+    /* ═══════════════════════════════════════════
+       مو — مشکی، موج‌دار، حجیم
+       ═══════════════════════════════════════════ */
+
+    /* ۱. تاج مو — بالای سر */
+    for (let i = 0; i < Math.floor(B.hair * 0.14); i++) {
+      const a = Math.PI * (1.0 + Math.random() * 0.9);
+      const r = 0.36 + Math.random() * 0.12;
+      add(Math.cos(a) * r * 0.85,
+          -0.42 + Math.sin(a) * r,
+          mixColor(P.HAIR, P.HAIR_MID, Math.random()));
+    }
+
+    /* ۲. موی سمت چپ بیننده — کوتاه‌تر */
+    for (let i = 0; i < Math.floor(B.hair * 0.22); i++) {
+      const t = Math.random();
+      const y = -0.78 + t * 1.25;
+      const baseX = -0.32 - t * 0.22;
+      const wave = Math.sin(t * 5.5) * 0.055 + Math.sin(t * 2.1) * 0.03;
+      const spread = 0.16 * (0.5 + t * 0.9);
+      add(baseX + wave + (Math.random() - 0.5) * spread,
+          y,
+          mixColor(P.HAIR, P.HAIR_EDGE, Math.random() * 0.6));
+    }
+
+    /* ۳. موی سمت راست بیننده — بلند و موج‌دار */
+    for (let i = 0; i < Math.floor(B.hair * 0.42); i++) {
+      const t = Math.random();
+      const y = -0.82 + t * 2.05;
+      const baseX = 0.30 + t * 0.36;
+      const wave = Math.sin(t * 8.2 + 1) * 0.075 +
+                   Math.sin(t * 3.4 + 0.5) * 0.05 +
+                   Math.sin(t * 13) * 0.02;
+      const spread = 0.24 * (0.6 + t * 0.7);
+      let c;
+      if (Math.random() < 0.07) {
+        c = mixColor(P.HAIR_MID, P.HAIR_SHINE, Math.random());
+      } else {
+        c = mixColor(P.HAIR, P.HAIR_MID, Math.random() * 0.7);
+      }
+      add(baseX + wave + (Math.random() - 0.5) * spread, y, c);
+    }
+
+    /* ۴. رشته‌های روی صورت */
+    for (let i = 0; i < Math.floor(B.hair * 0.06); i++) {
+      const side = Math.random() < 0.5 ? 1 : -1;
+      const t = Math.random();
+      const y = -0.75 + t * 0.6;
+      const x = side * (0.14 + t * 0.16) + Math.sin(t * 5 + side) * 0.028;
+      add(x, y, mixColor(P.HAIR, P.HAIR_EDGE, Math.random() * 0.5));
+    }
+
+    /* ۵. موی پشت شانه‌ها */
+    for (let i = 0; i < Math.floor(B.hair * 0.16); i++) {
+      const side = Math.random() < 0.5 ? 1 : -1;
+      const x = side * (0.32 + Math.random() * 0.42);
+      const y = 0.15 + Math.random() * 0.85;
+      add(x, y, mixColor(P.HAIR, P.HAIR_MID, Math.random() * 0.5));
+    }
+
+    /* ═══════════════════════════════════════════
+       صورت — بیضی با چرخش ملایم
+       ═══════════════════════════════════════════ */
+    const faceCX = 0.01;
+    const faceCY = -0.38;
+    const faceRX = 0.235;
+    const faceRY = 0.37;
+
+    for (let i = 0; i < B.face; i++) {
+      const a = Math.random() * TAU;
+      const r = Math.sqrt(Math.random());
+      let x = Math.cos(a) * faceRX * r;
+      let y = Math.sin(a) * faceRY * r;
+      /* پهن‌تر در گونه‌ها */
+      const yn = y / faceRY;
+      if (Math.abs(yn) < 0.55) x *= 1.06;
+      /* چانه باریک‌تر */
+      if (yn > 0.6) x *= (1 - (yn - 0.6) * 0.7);
+      /* پیشانی باریک‌تر */
+      if (yn < -0.5) x *= (1 - (-yn - 0.5) * 0.5);
+      add(faceCX + x, faceCY + y, mixColor(P.SKIN, P.SKIN_L, Math.random() * 0.5));
+    }
+
+    /* روشنایی پیشانی */
+    blob(0.0, -0.58, 0.13, 0.09, Math.floor(B.face * 0.15),
+      () => mixColor(P.SKIN_L, {r:255,g:245,b:235}, Math.random() * 0.7));
+
+    /* روشنایی گونه راست (سمت بیننده) */
+    blob(0.14, -0.24, 0.11, 0.10, Math.floor(B.face * 0.13),
+      () => mixColor(P.SKIN_L, P.SKIN, Math.random()));
+
+    /* سایه گونه چپ */
+    blob(-0.14, -0.24, 0.10, 0.10, Math.floor(B.face * 0.12),
+      () => mixColor(P.SKIN, P.SKIN_D, Math.random() * 0.65));
+
+    /* چانه */
+    blob(0.0, -0.04, 0.08, 0.05, Math.floor(B.face * 0.08),
+      () => mixColor(P.SKIN, P.SKIN_D, Math.random() * 0.4));
+
+    /* ═══════════════════════════════════════════
+       چشم‌ها — نگاه به سمت راست بیننده
+       ═══════════════════════════════════════════ */
+    for (const side of [-1, 1]) {
+      const ecx = side * 0.11;
+      const ecy = -0.47;
+      const eyeW = 0.078;
+      const eyeH = 0.034;
+      const pupilShift = 0.022;
+
+      /* خط چشم بالا */
+      for (let i = 0; i < Math.floor(B.eyes * 0.13); i++) {
+        const t = i / Math.floor(B.eyes * 0.13);
+        const x = ecx + (t - 0.5) * eyeW * 2.05;
+        const y = ecy - eyeH - 0.007 + Math.sin(t * Math.PI) * 0.005;
+        add(x + (Math.random() - 0.5) * 0.009,
+            y + (Math.random() - 0.5) * 0.005, P.LASH);
+      }
+
+      /* سفیدی چشم */
+      for (let i = 0; i < Math.floor(B.eyes * 0.14); i++) {
+        const a = Math.random() * TAU;
+        const r = Math.sqrt(Math.random());
+        add(ecx + Math.cos(a) * eyeW * r,
+            ecy + Math.sin(a) * eyeH * r * 0.9, P.EYE_W);
+      }
+
+      /* عنبیه با رگه‌های شعاعی */
+      const irisR = 0.031;
+      for (let i = 0; i < Math.floor(B.eyes * 0.24); i++) {
+        const a = Math.random() * TAU;
+        const rr = Math.sqrt(Math.random()) * irisR;
+        const rad = 0.75 + Math.sin(a * 9) * 0.25;
+        add(ecx + pupilShift + Math.cos(a) * rr,
+            ecy + Math.sin(a) * rr,
+            mixColor(P.IRIS, P.IRIS_L, rr / irisR * rad));
+      }
+
+      /* مردمک */
+      for (let i = 0; i < Math.floor(B.eyes * 0.09); i++) {
+        const a = Math.random() * TAU;
+        const r = Math.sqrt(Math.random()) * 0.013;
+        add(ecx + pupilShift + Math.cos(a) * r,
+            ecy + Math.sin(a) * r, P.PUPIL);
+      }
+
+      /* نقطهٔ نور */
+      for (let i = 0; i < Math.floor(B.eyes * 0.03); i++) {
+        const a = Math.random() * TAU;
+        const r = Math.sqrt(Math.random()) * 0.006;
+        add(ecx + pupilShift - 0.008 + Math.cos(a) * r,
+            ecy - 0.007 + Math.sin(a) * r, P.CATCH);
+      }
+
+      /* خط پایین چشم */
+      for (let i = 0; i < Math.floor(B.eyes * 0.07); i++) {
+        const t = i / Math.floor(B.eyes * 0.07);
+        const x = ecx + (t - 0.5) * eyeW * 1.85;
+        const y = ecy + eyeH + 0.003 + Math.sin(t * Math.PI) * 0.003;
+        add(x, y, mixColor(P.EYE_SHADOW, P.LASH, Math.random() * 0.6));
+      }
+
+      /* مژه‌های گوشه */
+      for (let i = 0; i < Math.floor(B.eyes * 0.05); i++) {
+        const corner = side === -1 ? -1 : 1;
+        const cx = ecx + corner * eyeW;
+        add(cx + corner * Math.random() * 0.018,
+            ecy - 0.01 + (Math.random() - 0.5) * 0.022, P.LASH);
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       ابروها
+       ═══════════════════════════════════════════ */
+    for (const side of [-1, 1]) {
+      const bx = side * 0.11;
+      const by = -0.585;
+      for (let i = 0; i < Math.floor(B.brows / 2); i++) {
+        const t = i / Math.floor(B.brows / 2);
+        const x = bx + (t - 0.5) * 0.155;
+        const arch = Math.sin(t * Math.PI) * 0.02;
+        add(x, by - arch + (Math.random() - 0.5) * 0.02,
+            mixColor(P.BROW, {r:38,g:28,b:34}, Math.random() * 0.5));
+      }
+      for (let i = 0; i < Math.floor(B.brows / 4); i++) {
+        const t = Math.random();
+        const x = bx + (t - 0.5) * 0.155;
+        const arch = Math.sin(t * Math.PI) * 0.02;
+        add(x, by - arch + (Math.random() - 0.5) * 0.026, P.BROW);
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       بینی
+       ═══════════════════════════════════════════ */
+    for (let i = 0; i < Math.floor(B.nose * 0.5); i++) {
+      const t = Math.random();
+      const y = -0.42 + t * 0.20;
+      const x = (Math.random() - 0.5) * 0.036 * (1 - t * 0.3) + 0.004;
+      add(x, y, t < 0.5 ? mixColor(P.SKIN, P.SKIN_D, 0.38) : P.SKIN);
+    }
+    blob(0.004, -0.21, 0.028, 0.020, Math.floor(B.nose * 0.28),
+      () => mixColor(P.SKIN, P.SKIN_L, Math.random() * 0.4));
+    for (let i = 0; i < Math.floor(B.nose * 0.22); i++) {
+      const side = i % 2 === 0 ? 1 : -1;
+      const a = Math.random() * TAU;
+      const r = Math.sqrt(Math.random()) * 0.011;
+      add(side * 0.032 + Math.cos(a) * r,
+          -0.19 + Math.sin(a) * r * 0.6, P.SKIN_DEEP);
+    }
+
+    /* ═══════════════════════════════════════════
+       دهان باز — گاز گرفتن انگشت
+       ═══════════════════════════════════════════ */
+    const mcx = 0.0;
+    const mcy = -0.12;
+    const mW = 0.105;
+    const mH = 0.062;
+
+    /* حفرهٔ دهان */
+    for (let i = 0; i < Math.floor(B.mouth * 0.20); i++) {
+      const a = Math.random() * TAU;
+      const r = Math.sqrt(Math.random());
+      add(mcx + Math.cos(a) * mW * r,
+          mcy + Math.sin(a) * mH * r,
+          mixColor(P.MOUTH_IN, {r:82,g:32,b:42}, Math.random()));
+    }
+
+    /* ردیف دندان بالایی */
+    const teethY = mcy - 0.022;
+    const teethW = mW * 0.92;
+    const numTeeth = 8;
+    for (let i = 0; i < Math.floor(B.mouth * 0.38); i++) {
+      const toothIdx = Math.floor(Math.random() * numTeeth);
+      const t = toothIdx / (numTeeth - 1);
+      const x = mcx - teethW + t * teethW * 2;
+      const y = teethY + (Math.random() - 0.5) * 0.028;
+      const posInTooth = (t * numTeeth) % 1;
+      const isGap = posInTooth < 0.1 || posInTooth > 0.9;
+      add(x + (Math.random() - 0.5) * 0.008, y,
+          isGap ? P.TOOTH_S : P.TOOTH);
+    }
+
+    /* لب بالا */
+    for (let i = 0; i < Math.floor(B.mouth * 0.14); i++) {
+      const t = Math.random();
+      const x = mcx + (t - 0.5) * mW * 2.1;
+      const curve = Math.sin(t * Math.PI);
+      const y = mcy - mH - 0.008 + (1 - curve) * 0.014;
+      add(x, y + (Math.random() - 0.5) * 0.008,
+          mixColor(P.LIP_D, P.LIP, Math.random() * 0.75));
+    }
+
+    /* لب پایین */
+    for (let i = 0; i < Math.floor(B.mouth * 0.16); i++) {
+      const t = Math.random();
+      const x = mcx + (t - 0.5) * mW * 1.85;
+      const curve = Math.sin(t * Math.PI);
+      const y = mcy + mH + 0.008 - (1 - curve) * 0.010;
+      add(x, y + (Math.random() - 0.5) * 0.008,
+          mixColor(P.LIP, P.LIP_L, Math.random() * 0.6));
+    }
+
+    /* گوشه‌های دهان */
+    for (let i = 0; i < Math.floor(B.mouth * 0.06); i++) {
+      const side = i % 2 === 0 ? 1 : -1;
+      const x = side * mW + (Math.random() - 0.5) * 0.014;
+      const y = mcy + (Math.random() - 0.5) * 0.018;
+      add(x, y, mixColor(P.LIP_D, P.SKIN_D, Math.random()));
+    }
+
+    /* ═══════════════════════════════════════════
+       دست و انگشت — انگشت اشاره به سمت دهان
+       ═══════════════════════════════════════════ */
+
+    /* انگشت — به سمت بالا به دهان */
+    const fgX = -0.005;
+    for (let i = 0; i < Math.floor(B.hand * 0.35); i++) {
+      const t = Math.random();
+      const y = -0.075 + t * 0.21;
+      const fingerW = 0.022;
+      const x = fgX + (Math.random() - 0.5) * fingerW * 2;
+      let c = mixColor(P.SKIN, P.SKIN_L, Math.random());
+      if (x < fgX) c = mixColor(c, P.SKIN_D, 0.45);
+      add(x, y, c);
+    }
+
+    /* ناخن */
+    blob(fgX, -0.10, 0.011, 0.009, Math.floor(B.hand * 0.04), () => P.NAIL);
+
+    /* مشت — کف دست */
+    for (let i = 0; i < Math.floor(B.hand * 0.45); i++) {
+      const a = Math.random() * TAU;
+      const r = Math.sqrt(Math.random()) * 0.085;
+      const x = -0.035 + Math.cos(a) * r;
+      const y = 0.21 + Math.sin(a) * r * 0.85;
+      let c = mixColor(P.SKIN, P.SKIN_L, Math.random());
+      if (x < -0.035) c = mixColor(c, P.SKIN_D, 0.4);
+      add(x, y, c);
+    }
+
+    /* انگشتر نقره روی انگشت حلقه */
+    for (let i = 0; i < Math.floor(B.hand * 0.08); i++) {
+      const t = Math.random() * TAU;
+      const x = -0.022 + Math.cos(t) * 0.018;
+      const y = 0.095 + Math.sin(t) * 0.007;
+      add(x, y, Math.random() < 0.7 ? P.RING : P.RING_D);
+    }
+
+    /* ═══════════════════════════════════════════
+       گردن
+       ═══════════════════════════════════════════ */
+    for (let i = 0; i < B.neck; i++) {
+      const a = Math.random() * TAU;
+      const r = Math.sqrt(Math.random());
+      const x = Math.cos(a) * 0.075 * r;
+      const y = 0.04 + Math.sin(a) * 0.075 * r;
+      const c = y < 0.07
+        ? mixColor(P.SKIN, P.SKIN_D, 0.5)
+        : mixColor(P.SKIN, P.SKIN_L, Math.random() * 0.3);
+      add(x, y, c);
+    }
+
+    /* ═══════════════════════════════════════════
+       سینه و یقهٔ V
+       ═══════════════════════════════════════════ */
+    for (let i = 0; i < B.chest; i++) {
+      const t = Math.random();
+      const y = 0.13 + t * 0.58;
+      const vW = 0.05 + t * 0.21;
+      const x = (Math.random() - 0.5) * vW * 2;
+      add(x, y, mixColor(P.SKIN, P.SKIN_D, t * 0.35));
+    }
+
+    /* سایه خط وسط */
+    for (let i = 0; i < Math.floor(B.chest * 0.14); i++) {
+      const t = Math.random();
+      add((Math.random() - 0.5) * 0.02,
+          0.20 + t * 0.5,
+          mixColor(P.SKIN_D, P.SKIN_DEEP, Math.random() * 0.5));
+    }
+
+    /* ═══════════════════════════════════════════
+       کت مشکی
+       ═══════════════════════════════════════════ */
+
+    /* شانهٔ چپ بیننده */
+    for (let i = 0; i < Math.floor(B.blazer * 0.32); i++) {
+      const x = -0.35 - Math.random() * 0.38;
+      const y = 0.20 + Math.random() * 0.80;
+      const lapelEdge = -0.15 + (y - 0.20) * 0.33;
+      if (x > lapelEdge) continue;
+      add(x, y, mixColor(P.BLAZER, P.BLAZER_H, Math.random() * 0.3));
+    }
+
+    /* شانهٔ راست بیننده */
+    for (let i = 0; i < Math.floor(B.blazer * 0.32); i++) {
+      const x = 0.30 + Math.random() * 0.48;
+      const y = 0.20 + Math.random() * 0.80;
+      const lapelEdge = 0.15 - (y - 0.20) * 0.33;
+      if (x < lapelEdge) continue;
+      add(x, y, mixColor(P.BLAZER, P.BLAZER_H, Math.random() * 0.3));
+    }
+
+    /* لبه‌های یقهٔ پهن */
+    for (let i = 0; i < Math.floor(B.blazer * 0.18); i++) {
+      const side = i % 2 === 0 ? 1 : -1;
+      const t = Math.random();
+      const y = 0.20 + t * 0.72;
+      const x = side * (0.16 - t * 0.06) + (Math.random() - 0.5) * 0.01;
+      add(x, y, mixColor(P.BLAZER_H, {r:58,g:58,b:68}, Math.random() * 0.4));
+    }
+
+    /* بازوی چپ (روی بدن) */
+    for (let i = 0; i < Math.floor(B.blazer * 0.10); i++) {
+      const x = -0.62 + Math.random() * 0.28;
+      const y = 0.35 + Math.random() * 0.55;
+      add(x, y, mixColor(P.BLAZER, P.BLAZER_H, Math.random() * 0.4));
+    }
+
+    /* دکمه‌های آستین */
+    for (let i = 0; i < 3; i++) {
+      const bx = -0.56;
+      const by = 0.52 + i * 0.045;
+      for (let j = 0; j < 5; j++) {
+        const a = Math.random() * TAU;
+        const r = Math.sqrt(Math.random()) * 0.013;
+        add(bx + Math.cos(a) * r, by + Math.sin(a) * r,
+            mixColor({r:42,g:42,b:52}, P.BLAZER, Math.random()));
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       توری مشکی — کف یقه
+       ═══════════════════════════════════════════ */
+    for (let i = 0; i < B.lace; i++) {
+      const t = Math.random();
+      const y = 0.68 + t * 0.10;
+      const x = (Math.random() - 0.5) * (0.15 + t * 0.10);
+      const lace = Math.sin(x * 42) * Math.cos(y * 42);
+      if (lace < -0.35) continue;
+      add(x, y, mixColor(P.LACE, P.LACE_H, Math.random() * 0.5));
+    }
+
+    /* ═══════════════════════════════════════════
+       گردنبند نقره با پلاک
+       ═══════════════════════════════════════════ */
+
+    /* زنجیر دور گردن */
+    for (let i = 0; i < Math.floor(B.jewel * 0.5); i++) {
+      const side = Math.random() < 0.5 ? 1 : -1;
+      const t = Math.random();
+      const y = 0.11 + t * 0.28;
+      const x = side * (0.055 + t * 0.038) + (Math.random() - 0.5) * 0.005;
+      add(x, y, P.CHAIN);
+    }
+
+    /* پلاک قلب شکل */
+    for (let i = 0; i < Math.floor(B.jewel * 0.32); i++) {
+      const a = Math.random() * TAU;
+      const r = Math.sqrt(Math.random()) * 0.018;
+      add(Math.cos(a) * r, 0.42 + Math.sin(a) * r, P.PENDANT);
+    }
+
+    /* ═══════════════════════════════════════════
+       پس‌زمینه — ذرات خاکستری کم‌رنگ در گوشه‌ها
+       ═══════════════════════════════════════════ */
+    const remaining = n - pts.length;
+    for (let i = 0; i < remaining; i++) {
+      const x = (Math.random() - 0.5) * 2.0;
+      const y = (Math.random() - 0.5) * 2.4;
+      /* فقط گوشه‌ها — نه روی سوژه */
+      const inSubject = Math.abs(x) < 0.85 && y > -1.05 && y < 1.05;
+      if (inSubject) continue;
+      add(x, y, mixColor(P.BG, {r: 28, g: 28, b: 38}, Math.random()));
+    }
+
+    /* پر کردن نهایی */
+    while (pts.length < n) {
+      const a = Math.random() * TAU;
+      const r = Math.sqrt(Math.random()) * 0.3;
+      add(Math.cos(a) * r, Math.sin(a) * r - 0.4, P.SKIN);
+    }
+
+    return pts.slice(0, n);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ذرات — تعداد بالا برای جزئیات
+     ═══════════════════════════════════════════════════════ */
+  const N = prefersReduced ? 2500 :
+            (isMobile || lowEnd) ? 6500 : 13000;
+
+  const particles = [];
+  for (let i = 0; i < N; i++) {
+    const a = Math.random() * TAU;
+    const r = 0.4 + Math.random() * 0.6;
+    const depth = Math.pow(Math.random(), 1.3);
+    particles.push({
+      cx: Math.cos(a) * r,
+      cy: Math.sin(a) * r,
+      sx: 0, sy: 0,
+      tx: 0, ty: 0,
+      cr: 217, cg: 164, cb: 65,
+      sr: 217, sg: 164, sb: 65,
+      tr: 217, tg: 164, tb: 65,
+      ox: 0, oy: 0,
+      vx: 0, vy: 0,
+      depth: depth,
+      size: 0.45 + depth * 0.85 + Math.random() * 0.25,
+      seed: Math.random() * TAU,
+      sensitivity: 0.75 + Math.random() * 1.15,
+      skipPhysics: depth < 0.25
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     State
+     ═══════════════════════════════════════════════════════ */
+  let morphProgress = 0;
+  const MORPH_DURATION = 2.4;   /* ورود اولیه */
+  let time = 0;
+  let paused = false;
+  let targetPause = 1;
+  let currentPause = 1;
+  let running = true;
+  let rafId = null;
+  let lastT = performance.now();
+  let fpsAcc = 0, fpsCount = 0;
+
+  let targetMX = 0.5, targetMY = 0.5;
+  let currentMX = 0.5, currentMY = 0.5;
+  let smoothMX = 0.5, smoothMY = 0.5;
+  let sensorActive = false;
+  let motionMagnitude = 0;
+  let lastMotionMag = 9.8;
+
+  /* ═══════════════════════════════════════════════════════
+     تخصیص پرتره
+     ═══════════════════════════════════════════════════════ */
+  function assignPortrait() {
+    const targets = makePortrait(N);
+
+    /* مرتب‌سازی زاویه‌ای برای morph نرم */
+    const pSorted = particles.map(p => ({ p, a: Math.atan2(p.cy, p.cx) }))
+                             .sort((A, B) => A.a - B.a);
+    const tSorted = targets.map(t => ({ t, a: Math.atan2(t.y, t.x) }))
+                           .sort((A, B) => A.a - B.a);
+
+    for (let i = 0; i < N; i++) {
+      const p = pSorted[i].p;
+      const t = tSorted[i].t;
+      p.sx = p.cx; p.sy = p.cy;
+      p.tx = t.x;  p.ty = t.y;
+      p.sr = p.cr; p.sg = p.cg; p.sb = p.cb;
+      p.tr = t.r;  p.tg = t.g;  p.tb = t.b;
+    }
+
+    morphProgress = 0;
+    const ml = document.getElementById('morphLabel');
+    if (ml) ml.textContent = 'REFORM';
+  }
+
+  function reflow() {
+    /* موقعیت‌های فعلی رو به عنوان شروع، دوباره مستقر کن */
+    const targets = makePortrait(N);
+    const pSorted = particles.map(p => ({ p, a: Math.atan2(p.cy, p.cx) }))
+                             .sort((A, B) => A.a - B.a);
+    const tSorted = targets.map(t => ({ t, a: Math.atan2(t.y, t.x) }))
+                           .sort((A, B) => A.a - B.a);
+
+    for (let i = 0; i < N; i++) {
+      const p = pSorted[i].p;
+      const t = tSorted[i].t;
+      p.sx = p.ox + p.tx; p.sy = p.oy + p.ty;
+      p.tx = t.x;  p.ty = t.y;
+      p.sr = p.tr; p.sg = p.tg; p.sb = p.tb;
+      p.tr = t.r;  p.tg = t.g;  p.tb = t.b;
+      p.ox = 0; p.oy = 0; p.vx = 0; p.vy = 0;
+    }
+
+    morphProgress = 0;
+    const ml = document.getElementById('morphLabel');
+    if (ml) ml.textContent = 'REFORM';
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     رسم
+     ═══════════════════════════════════════════════════════ */
+  function draw() {
+    /* fade پس‌زمینه */
+    const fadeAlpha = morphProgress < 1 ? 0.14 : 0.24;
+    ctx.fillStyle = 'rgba(5, 5, 10, ' + fadeAlpha + ')';
+    ctx.fillRect(0, 0, W, H);
+
+    /* پارالاکس */
+    const px = (currentMX - 0.5) * 24;
+    const py = (currentMY - 0.5) * 24;
+
+    /* نفس‌کشیدن */
+    const breathe = 1 + Math.sin(time * 0.55) * 0.018 * currentPause;
+
+    /* هالهٔ ملایم */
+    const glowIntensity = 0.025 + (1 - morphProgress) * 0.04 + motionMagnitude * 0.035;
+    if (glowIntensity > 0.005) {
+      const glowR = Math.min(W, H) * 0.7;
+      const glow = ctx.createRadialGradient(CX + px, CY + py, 0, CX + px, CY + py, glowR);
+      glow.addColorStop(0, 'rgba(217, 164, 65, ' + glowIntensity.toFixed(3) + ')');
+      glow.addColorStop(1, 'rgba(5, 5, 10, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    /* آلفا و پیشرفت morph */
+    const e = morphProgress >= 1 ? 1 :
+      (t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)(morphProgress);
+    const isMorphing = morphProgress < 1;
+
+    const invScale = 1 / (SCALE * breathe);
+
+    /* ذرات */
+    for (let i = 0; i < N; i++) {
+      const p = particles[i];
+
+      let bx, by;
+      if (isMorphing) {
+        bx = lerp(p.sx, p.tx, e);
+        by = lerp(p.sy, p.ty, e);
+      } else {
+        bx = p.tx;
+        by = p.ty;
+      }
+
+      /* لرزش ملایم */
+      const sway = Math.sin(time * 0.85 + p.seed) * 0.0018 * currentPause;
+      bx += sway;
+      by += sway * 0.7;
+
+      const fx = bx + p.ox;
+      const fy = by + p.oy;
+
+      let cr, cg, cb;
+      if (isMorphing) {
+        cr = Math.round(lerp(p.sr, p.tr, e));
+        cg = Math.round(lerp(p.sg, p.tg, e));
+        cb = Math.round(lerp(p.sb, p.tb, e));
+      } else {
+        cr = p.tr; cg = p.tg; cb = p.tb;
+      }
+
+      const sizeBoost = isMorphing ? 1 + Math.sin(morphProgress * Math.PI) * 0.18 : 1;
+      const sz = p.size * invScale * 0.42 * sizeBoost;
+
+      const depthAlpha = 0.30 + p.depth * 0.60;
+      const alpha = (isMorphing ? (0.5 + e * 0.4) : (0.78 + Math.sin(time * 1.2 + p.seed) * 0.10)) * depthAlpha;
+
+      const cX = fx * SCALE * breathe + CX + px;
+      const cY = fy * SCALE * breathe + CY + py;
+
+      ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + alpha.toFixed(3) + ')';
+      if (sz < 0.9) {
+        const s2 = sz * 2;
+        ctx.fillRect(cX - sz, cY - sz, s2, s2);
+      } else {
+        ctx.beginPath();
+        ctx.arc(cX, cY, sz, 0, TAU);
+        ctx.fill();
+      }
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     حلقه
+     ═══════════════════════════════════════════════════════ */
+  function loop(now) {
+    if (!running) return;
+    const dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+
+    /* FPS */
+    fpsAcc += dt; fpsCount++;
+    if (fpsAcc >= 0.5) {
+      const fps = fpsCount / fpsAcc;
+      const fpsEl = document.getElementById('fpsLabel');
+      if (fpsEl) fpsEl.textContent = Math.round(fps);
+      fpsAcc = 0; fpsCount = 0;
+      if (fps < 26 && DPR_CAP > 1.0) {
+        DPR_CAP = Math.max(1.0, DPR_CAP - 0.2);
+        resize();
+      }
+    }
+
+    /* نرم‌سازی */
+    currentPause += (targetPause - currentPause) * 0.08;
+    currentMX += (targetMX - currentMX) * 0.10;
+    currentMY += (targetMY - currentMY) * 0.10;
+
+    /* فیزیک ذرات — حساس */
+    const ax = (currentMX - 0.5) * 2;
+    const ay = (currentMY - 0.5) * 2;
+    const accelStrength = 0.0058 * (1 + motionMagnitude * 2.4);
+
+    for (let i = 0; i < N; i++) {
+      const p = particles[i];
+      if (p.skipPhysics) {
+        p.ox *= 0.94; p.oy *= 0.94;
+        continue;
+      }
+      p.vx += ax * p.sensitivity * accelStrength;
+      p.vy += ay * p.sensitivity * accelStrength;
+      p.vx += -p.ox * 0.018;
+      p.vy += -p.oy * 0.018;
+      p.vx *= 0.955;
+      p.vy *= 0.955;
+      p.ox += p.vx * currentPause;
+      p.oy += p.vy * currentPause;
+      /* کلمپ کوچک — چهره شکلشو حفظ کنه */
+      const maxOff = 0.055;
+      if (p.ox > maxOff) p.ox = maxOff;
+      if (p.ox < -maxOff) p.ox = -maxOff;
+      if (p.oy > maxOff) p.oy = maxOff;
+      if (p.oy < -maxOff) p.oy = -maxOff;
+    }
+
+    motionMagnitude *= 0.93;
+
+    /* morph */
+    if (morphProgress < 1) {
+      morphProgress += dt / MORPH_DURATION;
+      if (morphProgress >= 1) {
+        morphProgress = 1;
+        const ml = document.getElementById('morphLabel');
+        if (ml) ml.textContent = 'STILL';
+      }
+    }
+
+    time += dt * currentPause;
+    draw();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ورودی
+     ═══════════════════════════════════════════════════════ */
+  window.addEventListener('mousemove', e => {
+    if (sensorActive) return;
+    targetMX = clamp(e.clientX / W, 0, 1);
+    targetMY = clamp(e.clientY / H, 0, 1);
+  }, { passive: true });
+
+  window.addEventListener('touchmove', e => {
+    if (sensorActive) return;
+    if (e.touches.length) {
+      const t = e.touches[0];
+      targetMX = clamp(t.clientX / W, 0, 1);
+      targetMY = clamp(t.clientY / H, 0, 1);
+    }
+  }, { passive: true });
+
+  function handleMotion(e) {
+    const a = e.accelerationIncludingGravity || e.acceleration;
+    if (!a) return;
+    if (!sensorActive) {
+      sensorActive = true;
+      const sEl = document.getElementById('sensorLabel');
+      if (sEl) sEl.textContent = 'SENSOR · ACTIVE';
+      const hEl = document.getElementById('hintText');
+      if (hEl) hEl.textContent = 'TILT · SHAKE · TO · MOVE · PARTICLES';
+    }
+    const x = a.x || 0, y = a.y || 0, z = a.z || 0;
+    const gx = clamp(x / 3.2, -1.5, 1.5);
+    const gy = clamp(y / 3.2, -1.5, 1.5);
+    smoothMX += (gx - smoothMX) * 0.25;
+    smoothMY += (gy - smoothMY) * 0.25;
+    targetMX = clamp(0.5 + smoothMX * 0.55, 0, 1);
+    targetMY = clamp(0.5 + smoothMY * 0.55, 0, 1);
+    const mag = Math.hypot(x, y, z);
+    const d = Math.abs(mag - lastMotionMag);
+    if (d > 3) motionMagnitude = Math.min(1, motionMagnitude + d * 0.10);
+    lastMotionMag = mag;
+  }
+
+  function setupMotion() {
+    if (!window.DeviceMotionEvent) {
+      const sEl = document.getElementById('sensorLabel');
+      if (sEl) sEl.textContent = 'SENSOR · N/A';
+      return;
+    }
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      const sEl = document.getElementById('sensorLabel');
+      if (sEl) sEl.textContent = 'SENSOR · TAP';
+      const ask = () => {
+        DeviceMotionEvent.requestPermission().then(state => {
+          if (state === 'granted') {
+            window.addEventListener('devicemotion', handleMotion, { passive: true });
+          }
+        }).catch(() => {});
+        window.removeEventListener('click', ask);
+        window.removeEventListener('touchstart', ask);
+      };
+      window.addEventListener('click', ask);
+      window.addEventListener('touchstart', ask, { passive: true });
+    } else {
+      window.addEventListener('devicemotion', handleMotion, { passive: true });
+    }
+  }
+
+  /* کلیک = بازسازی */
+  let clickLock = 0;
+  window.addEventListener('click', e => {
+    if (e.target.closest('.pause-btn')) return;
+    const now = performance.now();
+    if (now - clickLock < 500) return;
+    clickLock = now;
+    if (morphProgress < 0.85) return;
+    reflow();
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      setPaused(!paused);
+    }
+    if (e.code === 'KeyR') {
+      if (morphProgress >= 0.85) reflow();
+    }
+  });
+
+  const pauseBtn = document.getElementById('pauseBtn');
+  function setPaused(p) {
+    paused = p;
+    pauseBtn.classList.toggle('paused', p);
+    targetPause = p ? 0.04 : 1;
+  }
+  pauseBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    setPaused(!paused);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      running = false;
+      if (rafId) cancelAnimationFrame(rafId);
+    } else if (!running) {
+      running = true;
+      lastT = performance.now();
+      rafId = requestAnimationFrame(loop);
+    }
+  });
+
+  let rzTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(rzTimer);
+    rzTimer = setTimeout(resize, 150);
+  }, { passive: true });
+
+  /* ═══════════════════════════════════════════════════════
+     راه‌اندازی
+     ═══════════════════════════════════════════════════════ */
+  resize();
+  assignPortrait();
+  setupMotion();
+
+  const pcEl = document.getElementById('particleCount');
+  if (pcEl) pcEl.textContent = N.toLocaleString('en-US');
+
+  if (prefersReduced) targetPause = 0.45;
+
+  lastT = performance.now();
+  rafId = requestAnimationFrame(loop);
+})();
+</script>
+</body>
+  </html>
